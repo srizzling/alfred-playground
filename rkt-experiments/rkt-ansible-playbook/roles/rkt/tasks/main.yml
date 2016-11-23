@@ -1,0 +1,24 @@
+---
+- name: Find out latest download url of rkt from github
+  github_release:
+    token: "{{ github_login_token }}"
+    user: coreos
+    repo: rkt
+    action: get_asset_url
+    asset_regex: ".tar.gz$"
+    release_version: latest
+  register: rkt_release_obj
+
+- name: Download and extract archive from github releases
+  unarchive:
+    src: "{{ rkt_release_obj.asset_url }}"
+    remote_src: true
+    dest: /opt/
+    creates: /opt/rkt-{{ rkt_release_obj.tag }}
+
+- name: Copy rkt binary to path
+  copy:
+    remote_src: true
+    src: /opt/rkt-{{ rkt_release_obj.tag }}/rkt
+    dest: /usr/bin/
+
