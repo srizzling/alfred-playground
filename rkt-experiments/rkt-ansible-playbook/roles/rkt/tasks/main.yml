@@ -3,25 +3,52 @@
 - name: Find out latest download url of rkt from github
   github_release:
     token: "{{ github_login_token }}"
-    user: coreos
-    repo: rkt
+    user: "coreos"
+    repo: "rkt"
     action: get_asset_url
     asset_regex: ".tar.gz$"
     release_version: latest
-  register: rkt_release_obj
+  register: rkt_release
   delegate_to: 127.0.0.1
 
-- name: Download and extract archive from github releases
+
+- name: Find out latest download url of rkt from github
+  github_release:
+    token: "{{ github_login_token }}"
+    user: "containers"
+    repo: "build"
+    action: get_asset_url
+    asset_regex: ".tar.gz$"
+    release_version: latest
+  register: acbuild_release
+  delegate_to: 127.0.0.1
+
+
+- name: Download and extract archive from github releases for rkt
   unarchive:
-    src: '{{ rkt_release_obj.asset_url }}'
+    src: '{{ rkt_release.asset_url }}'
     remote_src: yes
     dest: /opt/
-    creates: /opt/rkt-{{ rkt_release_obj.tag }}
+    creates: /opt/rkt-{{ rkt_release.tag }}
   become: true
 
-- name: Copy rkt binary to path
+- name: Download and extract archive from github releases for acbuild
+  unarchive:
+    src: '{{ acbuild_release.asset_url }}'
+    remote_src: yes
+    dest: /opt/
+    creates: /opt/acbuild-{{ acbuild_release.tag }}
+  become: true
+
+- name: Copy binarys to path
   copy:
     remote_src: true
-    src: /opt/rkt-{{ rkt_release_obj.tag }}/rkt
+    src: /opt/{{ item.base }}-{{ item.version }}/{{ item.base }}
     dest: /usr/bin/
+    mode: 0755
+  with_items:
+    - base: "rkt"
+      version: "{{ rkt_release.tag }}"
+    - base: "acbuild"
+      version: "{{ acbuild_release.tag }}"
   become: true
